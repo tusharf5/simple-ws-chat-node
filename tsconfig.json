@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "alwaysStrict": true,
+  },
+  "include": ["client.mjs", "server.mjs"],
+  "exclude": [
+    "node_modules/**/*"
+  ]
+}
