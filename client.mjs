@@ -11,13 +11,11 @@ wsConnection.addEventListener("open", (event) => {
     type:"NEW",
   }))
 
-
   
 });
 
 // Listen for messages
 wsConnection.addEventListener("message", (event) => {
-  console.log("Message from server ", event.data);
   const messagePayload = JSON.parse(event.data.toString("utf-8"));
 
 
@@ -34,6 +32,7 @@ wsConnection.addEventListener("message", (event) => {
 
     process.stdin.once("data", (data) => {
       if(data.toString("utf-8").replace("\n", "") === "") {
+        console.log("no client selected");
         return;
       }
       wsConnection.send(JSON.stringify({
@@ -46,7 +45,7 @@ wsConnection.addEventListener("message", (event) => {
 
   if(messagePayload.type === "JOINED") {
     console.log("You are not chatting with %s", messagePayload.recipientId);
-
+    process.stdin.write(`YOU > `)
     process.stdin.on("data", (data) => {
       wsConnection.send(JSON.stringify({
           type:"Message",
@@ -58,7 +57,8 @@ wsConnection.addEventListener("message", (event) => {
   }
 
   if(messagePayload.type === "Message") {
-    console.log("Message from %s: %s", messagePayload.recipientId, messagePayload.message);
+    console.log("\n%s > %s", messagePayload.recipientId, messagePayload.message);
+    process.stdin.write(`YOU > `)
   }
 
 });
