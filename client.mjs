@@ -8,7 +8,7 @@ let clientId = "";
 
 wsConnection.addEventListener("open", (event) => {
 
-  rl.question("What is your name:", (answer) => {
+  rl.question("What is your name: ", (answer) => {
     wsConnection.send(JSON.stringify({
       type: "NEW",
       clientId: answer.trim(),
@@ -23,7 +23,6 @@ wsConnection.addEventListener("message", (event) => {
 
   if (messagePayload.type === "ACCEPT") {
     clientId = messagePayload.id;
-    console.log("connection accepted client id %s", clientId);
   }
 
   if (messagePayload.type === "ASK") {
@@ -46,7 +45,7 @@ wsConnection.addEventListener("message", (event) => {
 
   if (messagePayload.type === "JOINED") {
     console.log("You are not chatting with %s", messagePayload.recipientId);
-    process.stdin.write(`YOU > `)
+    process.stdout.write(`[${clientId}] `)
     rl.on("line", (message) => {
       wsConnection.send(JSON.stringify({
         type: "Message",
@@ -54,18 +53,18 @@ wsConnection.addEventListener("message", (event) => {
         clientId: clientId,
         recipientId: messagePayload.recipientId,
       }));
-      process.stdout.write(`YOU > `)
+      process.stdout.write(`[${clientId}] `)
     })
   }
 
   if (messagePayload.type === "Message") {
-    rl.pause();
     const data = rl.line;
+    rl.pause();
     process.stdout.clearLine(0, () => {
-      process.stdout.write(`${messagePayload.recipientId} > ${messagePayload.message}\n`)
-      process.stdout.write(`YOU > `)
-      process.stdin.write(data); // copy the lefover data
+      process.stdout.write(`[${messagePayload.recipientId}] ${messagePayload.message}\n`)
+      process.stdout.write(`[${clientId}] `)
       rl.resume();
+      data && process.stdin.write(data); // copy the leftover dat
     });
   }
 

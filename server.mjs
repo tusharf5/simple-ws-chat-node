@@ -119,10 +119,11 @@ function joinRoom(payload, conn) {
     }))
   } else {
     conn.send(JSON.stringify({
-      type: "Message",
-      message: "Message not sent. Recipient is offline",
-      recipientId: "server",
-    }))
+      data: Array.from(clientsById.keys()).
+        map(client => client)
+        .filter(id => id !== clientId),
+      type: "ASK"
+    }));
   }
 
 }
