@@ -1,66 +1,72 @@
-import {randomUUID} from 'crypto';
+import { randomUUID } from 'crypto';
 const wsConnection = new WebSocket("ws://localhost:8080");
+import { createInterface } from 'readline';
+
+const rl = createInterface(process.stdin, process.stdout)
 
 let clientId = "";
 
 wsConnection.addEventListener("open", (event) => {
-  // when conn is established, 
-  // send a message to server
- 
-  wsConnection.send(JSON.stringify({
-    type:"NEW",
-  }))
 
-  
+  rl.question("What is your name:", (answer) => {
+    wsConnection.send(JSON.stringify({
+      type: "NEW",
+      clientId: answer.trim(),
+    }))
+  });
+
 });
 
 // Listen for messages
 wsConnection.addEventListener("message", (event) => {
   const messagePayload = JSON.parse(event.data.toString("utf-8"));
 
-
-  if(messagePayload.type === "ACCEPT") {
+  if (messagePayload.type === "ACCEPT") {
     clientId = messagePayload.id;
     console.log("connection accepted client id %s", clientId);
   }
 
-  if(messagePayload.type === "ASK") {
-    console.log("Select a client to talk to:")
+  if (messagePayload.type === "ASK") {
     messagePayload.data.forEach(id => {
       console.log(id);
     })
 
-    process.stdin.once("data", (data) => {
-      if(data.toString("utf-8").replace("\n", "") === "") {
+    rl.question("Select a client to talk to: ", (answer) => {
+      if (answer.trim() === "") {
         console.log("no client selected");
         return;
       }
       wsConnection.send(JSON.stringify({
-          type:"JOIN",
-          recipientId: data.toString("utf-8"),
-          clientId: clientId
+        type: "JOIN",
+        recipientId: answer,
+        clientId: clientId
       }));
     })
   }
 
-  if(messagePayload.type === "JOINED") {
+  if (messagePayload.type === "JOINED") {
     console.log("You are not chatting with %s", messagePayload.recipientId);
     process.stdin.write(`YOU > `)
-    process.stdin.on("data", (data) => {
+    rl.on("line", (message) => {
       wsConnection.send(JSON.stringify({
-          type:"Message",
-          message: data.toString("utf-8"),
-          clientId: clientId,
-          recipientId: messagePayload.recipientId,
+        type: "Message",
+        message: message.trim(),
+        clientId: clientId,
+        recipientId: messagePayload.recipientId,
       }));
+      process.stdout.write(`YOU > `)
     })
   }
 
-  if(messagePayload.type === "Message") {
-    console.log("\n%s > %s", messagePayload.recipientId, messagePayload.message);
-    process.stdin.write(`YOU > `)
+  if (messagePayload.type === "Message") {
+    rl.pause();
+    const data = rl.line;
+    process.stdout.clearLine(0, () => {
+      process.stdout.write(`${messagePayload.recipientId} > ${messagePayload.message}\n`)
+      process.stdout.write(`YOU > `)
+      process.stdin.write(data); // copy the lefover data
+      rl.resume();
+    });
   }
 
 });
-
-// https://github.com/websockets/ws

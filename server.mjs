@@ -7,6 +7,7 @@ const wss = new WebSocketServer({
 
 const clientsById = new Map();
 const clientsByConn = new WeakMap();
+const rooms = new Map();
 
 wss.on('connection', function connection(conn) {
   console.log("got a connection request");
@@ -19,8 +20,20 @@ wss.on('connection', function connection(conn) {
 
   conn.on("close", () => {
     const clientId = clientsByConn.get(conn);
-    console.log({ clientId });
+    const recipient = rooms.get(clientId);
+    const recipientConn = clientsById.get(recipient);
+    rooms.delete(clientId);
+    rooms.delete(recipient);
+
     clientsById.delete(clientId);
+
+    
+    if(recipientConn)
+    recipientConn.send(JSON.stringify({
+      type: "Message",
+      message: "Recipient went offline",
+      recipientId: "server",
+    }))
   })
 
 });
@@ -63,7 +76,7 @@ function onMessage(data, conn) {
  * @param {WebSocket} conn 
  */
 function newClient(payload, conn) {
-  const clientId = randomUUID();
+  const clientId = payload.clientId;
 
   clientsById.set(clientId, conn);
   clientsByConn.set(conn, clientId);
@@ -92,6 +105,9 @@ function joinRoom(payload, conn) {
   const recipientConn = clientsById.get(recipientId);
 
   if (recipientConn) {
+    rooms.set(clientId, recipientId);
+    rooms.set(recipientId, clientId);
+
     conn.send(JSON.stringify({
       type: "JOINED",
       recipientId: recipientId,
@@ -117,6 +133,7 @@ function joinRoom(payload, conn) {
  * @param {WebSocket} conn 
  */
 function onChat(payload, conn) {
+
   const recipientId = payload.recipientId.trim();
   const clientId = payload.clientId.trim();;
 
